@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>로그인</h1>
+        <form id="login-form" method="POST" onsubmit="return validateForm();">
+            <!-- 아이디 입력 -->
+            <div id="username-step" {% if show_password_step %}style="display: none;"{% endif %}>
+                <input type="text" name="username" id="username" placeholder="아이디" value="{{ username or '' }}">
+                <p class="error" id="username-error">{{ username_error }}</p>
+                <div class="button-group">
+                    <a href="{{ url_for('register') }}" class="secondary-btn">회원가입</a>
+                    <button type="button" id="next-username">다음</button>
+                </div>
+            </div>
+
+            <!-- 비밀번호 입력 -->
+            <div id="password-step" {% if show_password_step %}style="display: block;"{% else %}style="display: none;"{% endif %}>
+                <input type="password" name="password" id="password" placeholder="비밀번호">
+                <p class="error" id="password-error">{{ password_error }}</p>
+                <div class="button-group">
+                    <a href="{{ url_for('register') }}" class="secondary-btn">회원가입</a>
+                    <button type="submit" class="primary-btn">다음</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const usernameStep = document.getElementById("username-step");
+        const passwordStep = document.getElementById("password-step");
+        const usernameInput = document.getElementById("username");
+        const passwordInput = document.getElementById("password");
+        const usernameError = document.getElementById("username-error");
+        const passwordError = document.getElementById("password-error");
+        const nextUsernameButton = document.getElementById("next-username");
+
+        // 아이디 검증 및 비밀번호 입력칸 보여주기
+        nextUsernameButton.addEventListener("click", function () {
+            const username = usernameInput.value.trim();
+
+            if (username === "") {
+                usernameError.textContent = "아이디를 입력해주세요.";
+                return;
+            }
+
+            fetch("/check-username", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `username=${encodeURIComponent(username)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    usernameStep.style.display = "none";
+                    passwordStep.style.display = "block";
+                    passwordInput.focus();
+                } else {
+                    usernameError.textContent = "계정을 찾을 수 없습니다.";
+                }
+            })
+            .catch(() => {
+                usernameError.textContent = "서버와의 통신 오류가 발생했습니다.";
+            });
+        });
+
+        // 비밀번호 검증
+        function validateForm() {
+            const password = passwordInput.value.trim();
+            if (password === "") {
+                passwordError.textContent = "비밀번호를 입력해주세요.";
+                return false;  // 폼 제출 방지
+            }
+            return true;
+        }
+
+        // 비밀번호 입력 시 에러 메시지 초기화
+        passwordInput.addEventListener("input", function () {
+            passwordError.textContent = "";
+        });
+    </script>
+</body>
+</html>

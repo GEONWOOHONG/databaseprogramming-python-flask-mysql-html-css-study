@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결과</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>게임 결과</h1>
+        <p>소요 시간: {{ '%02d:%02d' % (elapsed_time // 60, elapsed_time % 60) }}</p>
+        <p>정확도: {{ "%.2f" % accuracy }}%</p>
+        <a class="btn" href="{{ url_for('game.index') }}">그만두기</a>
+        <a class="btn" href="{{ url_for('game.restart_game') }}">다시하기</a>
+    </div>
+</body>
+</html>

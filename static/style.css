@@ -1,0 +1,79 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+.container {
+    margin-top: 100px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+h1 {
+    color: #333;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+button, .btn, .primary-btn, .secondary-btn {
+    display: inline-block;
+    height: 48px; /* 동일 높이 */
+    padding: 0 20px;
+    font-size: 16px;
+    text-align: center;
+    line-height: 48px; /* 텍스트 수직 중앙 정렬 */
+    text-decoration: none;
+    border-radius: 5px;
+    cursor: pointer;
+    box-sizing: border-box;
+    border: none;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+}
+
+button:hover, .btn:hover, .primary-btn:hover {
+    background-color: #0056b3;
+}
+
+.secondary-btn {
+    background-color: #6c757d;
+    color: white;
+}
+
+.secondary-btn:hover {
+    background-color: #5a6268;
+}
+
+/* 버튼 그룹 */
+.button-group {
+    display: flex;
+    justify-content: space-between; /* 버튼 좌우 정렬 */
+    align-items: center; /* 세로 중앙 정렬 */
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.error {
+    color: red;
+    font-size: 12px;
+    margin-top: -8px;
+    text-align: left;
+    margin-left: 5px;
+}
