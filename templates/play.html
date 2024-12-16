@@ -6,15 +6,118 @@
     <title>단어 입력</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body data-elapsed-time="{{ elapsed_time }}">
     <div class="container">
         <h1>단어 연습 중</h1>
-        <p>현재 단어 ({{ current_index }}/20): <strong>{{ current_word }}</strong></p>
-        <p>경과 시간: {{ '%02d:%02d' % (elapsed_time // 60, elapsed_time % 60) }}</p>
-        <p>정확도: {{ "%.2f" % accuracy }}%</p>
-        <form method="POST">
-            <input type="text" name="user_input" placeholder="단어를 입력하세요" required autofocus>
+        <p>현재 단어 (<span id="current-index">{{ current_index }}</span>/20): <strong id="current-word">{{ current_word }}</strong></p>
+        <p>경과 시간: <span id="elapsed-time">{{ '%02d:%02d' % (elapsed_time // 60, elapsed_time % 60) }}</span></p>
+        <p>정확도: <span id="accuracy">{{ "%.2f" % accuracy }}%</span></p>
+        <form id="typing-form">
+            <input type="text" id="user-input" placeholder="단어를 입력하세요" autofocus>
+            <button type="submit">입력</button>
         </form>
     </div>
+    <script>
+        const elapsedTimeElement = document.getElementById("elapsed-time");
+        const accuracyElement = document.getElementById("accuracy");
+        const currentWordElement = document.getElementById("current-word");
+        const currentIndexElement = document.getElementById("current-index");
+        const userInputElement = document.getElementById("user-input");
+        const typingForm = document.getElementById("typing-form");
+        
+        let isProcessing = false; // 이중 실행 방지를 위한 플래그
+        let elapsedSeconds = parseInt(document.body.getAttribute("data-elapsed-time"), 10);
+
+        // 실시간 타이머
+        setInterval(() => {
+            elapsedSeconds++;
+            const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
+            const seconds = String(elapsedSeconds % 60).padStart(2, "0");
+            elapsedTimeElement.textContent = `${minutes}:${seconds}`;
+        }, 1000);
+
+        // 단어 입력 처리
+        typingForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            if (isProcessing) return; // 이미 처리 중이면 무시
+            isProcessing = true;
+
+            const userInput = userInputElement.value.trim();
+
+            // 글자 수가 맞지 않으면 아무 작업도 하지 않음
+            if (userInput.length !== currentWordElement.textContent.length) {
+                isProcessing = false; // 처리 플래그 해제
+                return;
+            }
+
+            await processInput(userInput);
+            isProcessing = false; // 처리 플래그 해제
+        });
+
+        // 자동 제출 처리
+        userInputElement.addEventListener("input", async () => {
+            const userInput = userInputElement.value.trim();
+            const requiredLength = currentWordElement.textContent.length;
+
+            if (isProcessing) return; // 이미 처리 중이면 무시
+
+            // 자동 제출 조건: 입력 글자 수가 요구 길이를 초과할 경우
+            if (userInput.length > requiredLength) {
+                isProcessing = true; // 처리 플래그 설정
+                userInputElement.value = userInput.substring(0, requiredLength); // 초과 글자 잘라내기
+                await processInput(userInputElement.value);
+                isProcessing = false; // 처리 플래그 해제
+            }
+        });
+
+        // 입력 처리 함수
+        async function processInput(userInput) {
+            const response = await fetch("/game/check_word", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_input: userInput }),
+            });
+
+            const result = await response.json();
+            if (result.completed) {
+                window.location.href = "/game/results";
+            } else {
+                updateGameUI(result);
+            }
+        }
+
+        // 게임 UI 업데이트 함수
+        function updateGameUI(result) {
+            // 입력 필드 값 강제 초기화
+            userInputElement.value = "";
+
+            // UI 업데이트
+            currentWordElement.textContent = result.next_word;
+            currentIndexElement.textContent = result.current_index;
+            accuracyElement.textContent = `${result.accuracy.toFixed(2)}%`;
+
+            // 포커스 강제 재설정
+            setTimeout(() => {
+                userInputElement.value = ""; // 브라우저 입력 버퍼 완전 초기화
+                userInputElement.focus();   // 포커스 재설정
+            }, 0);
+        }
+
+        // 스페이스바 입력 방지
+        userInputElement.addEventListener("keydown", (event) => {
+            if (event.code === "Space") {
+                event.preventDefault(); // 스페이스바 입력 차단
+            }
+        });
+
+        // 붙여넣기 비활성화
+        userInputElement.addEventListener("paste", (event) => {
+            event.preventDefault(); // 붙여넣기 차단
+        });
+
+        // 이전 입력 기록 방지
+        userInputElement.setAttribute("autocomplete", "off"); // 브라우저 자동완성 비활성화
+    </script>    
 </body>
 </html>

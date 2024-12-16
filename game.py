@@ -1,7 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
 import pymysql
 import random
-import json
 import time
 
 # 블루프린트 정의
@@ -49,7 +48,7 @@ def index():
     return render_template("index.html", nickname=session.get("nickname"))
 
 # 게임 진행 페이지
-@game_blueprint.route("/play", methods=["GET", "POST"])
+@game_blueprint.route("/play", methods=["GET"])
 def play_game():
     global random_words, current_index, start_time, total_correct, total_characters
 
@@ -63,17 +62,39 @@ def play_game():
     elapsed_time = int(time.time() - start_time)
     accuracy = (total_correct / total_characters) * 100 if total_characters > 0 else 0
 
-    if request.method == "POST":
-        user_input = request.form.get("user_input", "")
-        if user_input:
-            for i in range(len(current_word)):
-                if i < len(user_input) and user_input[i] == current_word[i]:
-                    total_correct += 1
-                total_characters += 1
-            current_index += 1
-            return redirect(url_for("game.play_game"))
+    return render_template(
+        "play.html",
+        current_word=current_word,
+        current_index=current_index + 1,
+        elapsed_time=elapsed_time,
+        accuracy=accuracy
+    )
 
-    return render_template("play.html", current_word=current_word, current_index=current_index + 1, elapsed_time=elapsed_time, accuracy=accuracy)
+# AJAX로 단어 확인 및 진행
+@game_blueprint.route("/check_word", methods=["POST"])
+def check_word():
+    global random_words, current_index, total_correct, total_characters
+
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "Unauthorized"})
+
+    user_input = request.json.get("user_input", "").strip()  # 공백 제거
+    current_word = random_words[current_index]
+
+    # 글자 비교
+    for i in range(len(current_word)):
+        if i < len(user_input) and user_input[i] == current_word[i]:
+            total_correct += 1
+        total_characters += 1
+
+    current_index += 1
+    if current_index >= len(random_words):
+        return jsonify({"success": True, "completed": True})
+
+    next_word = random_words[current_index]
+    accuracy = (total_correct / total_characters) * 100 if total_characters > 0 else 0
+    return jsonify({"success": True, "completed": False, "next_word": next_word, "current_index": current_index + 1, "accuracy": accuracy})
+
 
 # 결과 페이지
 @game_blueprint.route("/results")

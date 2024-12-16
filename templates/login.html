@@ -12,7 +12,7 @@
         <form id="login-form" method="POST" onsubmit="return validateForm();">
             <!-- 아이디 입력 -->
             <div id="username-step" {% if show_password_step %}style="display: none;"{% endif %}>
-                <input type="text" name="username" id="username" placeholder="아이디" value="{{ username or '' }}">
+                <input type="text" name="username" id="username" placeholder="아이디" value="{{ username or '' }}" autocomplete="off">
                 <p class="error" id="username-error">{{ username_error }}</p>
                 <div class="button-group">
                     <a href="{{ url_for('register') }}" class="secondary-btn">회원가입</a>
@@ -22,7 +22,7 @@
 
             <!-- 비밀번호 입력 -->
             <div id="password-step" {% if show_password_step %}style="display: block;"{% else %}style="display: none;"{% endif %}>
-                <input type="password" name="password" id="password" placeholder="비밀번호">
+                <input type="password" name="password" id="password" placeholder="비밀번호" autocomplete="off">
                 <p class="error" id="password-error">{{ password_error }}</p>
                 <div class="button-group">
                     <a href="{{ url_for('register') }}" class="secondary-btn">회원가입</a>
@@ -42,32 +42,55 @@
         const nextUsernameButton = document.getElementById("next-username");
 
         // 아이디 검증 및 비밀번호 입력칸 보여주기
-        nextUsernameButton.addEventListener("click", function () {
-            const username = usernameInput.value.trim();
+        nextUsernameButton.addEventListener("click", checkUsername);
 
-            if (username === "") {
-                usernameError.textContent = "아이디를 입력해주세요.";
-                return;
+        // 아이디 입력창에서 엔터키를 누르면 "다음" 버튼 클릭
+        usernameInput.addEventListener("keyup", function (event) {
+            if (event.key === "Enter") {
+                nextUsernameButton.click();
             }
+        });
 
-            fetch("/check-username", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: `username=${encodeURIComponent(username)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    usernameStep.style.display = "none";
-                    passwordStep.style.display = "block";
-                    passwordInput.focus();
-                } else {
-                    usernameError.textContent = "계정을 찾을 수 없습니다.";
-                }
-            })
-            .catch(() => {
-                usernameError.textContent = "서버와의 통신 오류가 발생했습니다.";
-            });
+        function checkUsername() {
+    const username = usernameInput.value.trim();
+
+    if (username === "") {
+        usernameError.textContent = "아이디를 입력해주세요.";
+        return;
+    }
+
+    fetch("/check-username", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `username=${encodeURIComponent(username)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 히스토리 상태 추가
+            history.pushState({ step: "password" }, "", window.location.href);
+
+            usernameStep.style.display = "none";
+            passwordStep.style.display = "block";
+            passwordInput.focus();
+        } else {
+            usernameError.textContent = "계정을 찾을 수 없습니다.";
+        }
+    })
+    .catch(() => {
+        usernameError.textContent = "서버와의 통신 오류가 발생했습니다.";
+    });
+}
+
+        // 뒤로 가기 이벤트 감지
+        window.addEventListener("popstate", function(event) {
+            if (event.state && event.state.step === "password") {
+                usernameStep.style.display = "none";
+                passwordStep.style.display = "block";
+            } else {
+                usernameStep.style.display = "block";
+                passwordStep.style.display = "none";
+            }
         });
 
         // 비밀번호 검증
