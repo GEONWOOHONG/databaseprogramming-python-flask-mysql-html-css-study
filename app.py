@@ -101,7 +101,7 @@ def register():
         cursor = connection.cursor()
         try:
             cursor.execute("INSERT INTO users (nickname, username, password) VALUES (%s, %s, %s)", 
-                           (nickname, username, hashed_password))
+            (nickname, username, hashed_password))
             connection.commit()
             flash("회원가입이 완료되었습니다.")
             return redirect(url_for("login"))
