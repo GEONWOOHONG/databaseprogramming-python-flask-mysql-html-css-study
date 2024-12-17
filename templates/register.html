@@ -4,9 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
 </head>
 <body>
+    <!-- 회원가입 성공 모달 -->
+    <div id="success-modal" style="display: none;">
+        <div class="modal-content">
+            <h2>회원가입이 성공했습니다.</h2>
+            <p>잠시 후 로그인 페이지로 이동합니다...</p>
+        </div>
+    </div>
+
     <div class="container">
         <h1>회원가입</h1>
         <form id="register-form" method="POST" onsubmit="return validateForm();">
@@ -43,53 +51,42 @@
     </div>
 
     <script>
-        function validateForm() {
-            let isValid = true;
-
-            // 각 입력 필드 가져오기
-            const nickname = document.getElementById("nickname");
-            const username = document.getElementById("username");
-            const password = document.getElementById("password");
-            const confirmPassword = document.getElementById("confirm_password");
-
-            // 각 오류 메시지 필드 가져오기
-            const nicknameError = document.getElementById("nickname-error");
-            const usernameError = document.getElementById("username-error");
-            const passwordError = document.getElementById("password-error");
-            const confirmPasswordError = document.getElementById("confirm-password-error");
-
-            // 오류 메시지 초기화
-            nicknameError.textContent = "";
-            usernameError.textContent = "";
-            passwordError.textContent = "";
-            confirmPasswordError.textContent = "";
-
-            // 입력값 검증
-            if (nickname.value.trim() === "") {
-                nicknameError.textContent = "닉네임을 입력하세요.";
-                isValid = false;
-            }
-
-            if (username.value.trim() === "") {
-                usernameError.textContent = "아이디를 입력하세요.";
-                isValid = false;
-            }
-
-            if (password.value.trim() === "") {
-                passwordError.textContent = "비밀번호를 입력하세요.";
-                isValid = false;
-            }
-
-            if (confirmPassword.value.trim() === "") {
-                confirmPasswordError.textContent = "비밀번호 재입력을 입력하세요.";
-                isValid = false;
-            } else if (confirmPassword.value !== password.value) {
-                confirmPasswordError.textContent = "비밀번호가 일치하지 않습니다.";
-                isValid = false;
-            }
-
-            return isValid; // 폼 제출 여부 결정
+        // 회원가입 성공 시 모달 표시 및 이동
+        function showSuccessModal() {
+            const successModal = document.getElementById("success-modal");
+            successModal.style.display = "flex"; // 모달 표시
+    
+            // 2초 후 로그인 페이지로 이동
+            setTimeout(() => {
+                window.location.href = "{{ url_for('login') }}";
+            }, 2000);
         }
-    </script>
+    
+        // AJAX를 통한 폼 제출 및 서버 검증
+        document.getElementById("register-form").addEventListener("submit", function (e) {
+            e.preventDefault(); // 기본 제출 방지
+    
+            const formData = new FormData(this);
+            fetch("/register", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 성공 시 모달 표시
+                if (data.success) {
+                    showSuccessModal();
+                } else {
+                    // 에러 메시지 표시
+                    const errors = data.errors || {};
+                    document.getElementById("nickname-error").textContent = errors.nickname || "";
+                    document.getElementById("username-error").textContent = errors.username || "";
+                    document.getElementById("password-error").textContent = errors.password || "";
+                    document.getElementById("confirm-password-error").textContent = errors.confirm_password || "";
+                }
+            })
+            .catch(() => alert("서버와의 통신 오류가 발생했습니다."));
+        });
+    </script>    
 </body>
 </html>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>단어 입력</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='play.css') }}">
 </head>
 
 <!-- 팝업 모달 -->
@@ -196,11 +196,11 @@
                 showExitWarning(target.href); // 모달 띄우기
             }
         });
-
+        
         // 모달 표시 함수 (타이머 정지 포함)
         function showExitWarning(targetUrl = null) {
             stopTimer(); // 타이머 멈춤
-            exitWarningModal.style.display = "block";
+            exitWarningModal.style.display = "flex"; // flex로 표시
 
             // 취소하기 버튼: 모달 닫고 타이머 재시작
             cancelExitButton.onclick = () => {
@@ -211,17 +211,14 @@
 
             // 다시하기 버튼: 페이지 새로고침
             retryExitButton.onclick = () => {
-                location.reload();
+                location.href = "/game/restart";  // "다시하기" 클릭 시 게임을 초기화
             };
 
             // 이동하기 버튼: 실제로 페이지 나감
             confirmExitButton.onclick = () => {
                 isExitAttempt = true; // 이동 상태를 true로 설정
-                if (targetUrl) {
-                    window.location.href = targetUrl;
-                } else {
-                    window.history.back();
-                }
+                window.history.replaceState(null, null, "/game/index"); // 히스토리 대체
+                window.location.replace("/game/index"); // 게임 메인 페이지로 이동
             };
         }
     </script>    

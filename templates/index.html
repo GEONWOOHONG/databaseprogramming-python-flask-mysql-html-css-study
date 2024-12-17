@@ -4,21 +4,152 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>타자 연습 게임</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>타자 연습 게임</h1>
+        <h1>낱말 연습 게임</h1>
         <form method="POST">
             <button type="submit" name="start_game">게임 시작</button>
         </form>
     </div>
-</body>
+
+    <!-- 사용자 점수 관련 박스 -->
+    <div class="user-score-box">
+        <h1>나의 낱말 분석</h1>
+        <div>
+            <p><strong>정확도가 높은 글자</strong></p>
+            <ul id="best-chars">
+                <!-- 동적으로 업데이트 될 부분 -->
+            </ul>
+        </div>
+        <div>
+            <p><strong>정확도가 낮은 글자</strong></p>
+            <ul id="worst-chars">
+                <!-- 동적으로 업데이트 될 부분 -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- 로그아웃 팝업 모달 -->
+    <div id="logout-modal" style="display: none;">
+        <div class="modal-content">
+            <h2>로그아웃 하시겠습니까?</h2>
+            <div class="button-container">
+                <button id="cancel-logout">취소하기</button>
+                <button id="confirm-logout">로그아웃</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 브라우저 뒤로 가기 방지
-        history.pushState(null, null, location.href);
-        window.onpopstate = function () {
-            history.go(1);  // 현재 페이지 유지
+        // 페이지가 로드될 때 사용자 점수 데이터 가져오기
+        window.onload = function () {
+            fetch("/game/get_user_score_data")
+                .then(response => response.json())
+                .then(data => {
+                    const bestCharsList = document.getElementById("best-chars");
+                    const worstCharsList = document.getElementById("worst-chars");
+    
+                    // 데이터가 성공적으로 반환된 경우
+                    if (data.success) {
+                        if (data.best_chars.length > 0) {
+                            // 잘 맞춘 글자 - 가로로 표시하며 각 글자를 ""로 묶기
+                            const bestChars = data.best_chars.map(item => `"${item[0]}"`).join(", ");
+                            const bestLi = document.createElement("li");
+                            bestLi.textContent = bestChars;
+                            bestCharsList.appendChild(bestLi);
+                        } else {
+                            // 충분한 기록이 없는 경우
+                            const li = document.createElement("li");
+                            li.textContent = "충분한 기록이 부족합니다.";
+                            li.style.color = "red";
+                            bestCharsList.appendChild(li);
+                        }
+    
+                        if (data.worst_chars.length > 0) {
+                            // 음수 스코어만 필터링하고 가장 낮은 스코어 기준으로 상위 4개 가져오기
+                            const filteredWorstChars = data.worst_chars
+                                .filter(item => item[1] < 0) // 스코어가 음수인 것만 선택
+                                .sort((a, b) => a[1] - b[1]) // 가장 작은 스코어 기준으로 정렬
+                                .slice(0, 4); // 상위 4개 가져오기
+    
+                            if (filteredWorstChars.length > 0) {
+                                const worstChars = filteredWorstChars.map(item => `"${item[0]}"`).join(", ");
+                                const worstLi = document.createElement("li");
+                                worstLi.textContent = worstChars;
+                                worstCharsList.appendChild(worstLi);
+                            } else {
+                                // 음수 스코어가 없는 경우
+                                const li = document.createElement("li");
+                                li.textContent = "충분한 기록이 부족합니다.";
+                                li.style.color = "red";
+                                worstCharsList.appendChild(li);
+                            }
+                        } else {
+                            // 충분한 기록이 없는 경우
+                            const li = document.createElement("li");
+                            li.textContent = "충분한 기록이 부족합니다.";
+                            li.style.color = "red";
+                            worstCharsList.appendChild(li);
+                        }
+                    } else {
+                        // 서버에서 데이터가 없을 때 메시지 출력
+                        const noDataMessage = "충분한 기록이 부족합니다.";
+    
+                        const bestLi = document.createElement("li");
+                        bestLi.textContent = noDataMessage;
+                        bestLi.style.color = "red";
+                        bestCharsList.appendChild(bestLi);
+    
+                        const worstLi = document.createElement("li");
+                        worstLi.textContent = noDataMessage;
+                        worstLi.style.color = "red";
+                        worstCharsList.appendChild(worstLi);
+                    }
+                })
+                .catch(error => {
+                    console.log("Error fetching user score data:", error);
+                    const errorMessage = "데이터를 불러오는 중 오류가 발생했습니다.";
+    
+                    const bestCharsList = document.getElementById("best-chars");
+                    const worstCharsList = document.getElementById("worst-chars");
+    
+                    const bestLi = document.createElement("li");
+                    bestLi.textContent = errorMessage;
+                    bestLi.style.color = "red";
+                    bestCharsList.appendChild(bestLi);
+    
+                    const worstLi = document.createElement("li");
+                    worstLi.textContent = errorMessage;
+                    worstLi.style.color = "red";
+                    worstCharsList.appendChild(worstLi);
+                });
         };
-    </script>
+    
+        // 로그아웃 팝업 열기
+        function showLogoutModal() {
+            document.getElementById("logout-modal").style.display = "flex";
+        }
+    
+        // 로그아웃 팝업 닫기
+        document.getElementById("cancel-logout").onclick = function() {
+            document.getElementById("logout-modal").style.display = "none";  // 팝업 닫기
+        };
+    
+        // 로그아웃 처리
+        document.getElementById("confirm-logout").onclick = function() {
+            window.location.href = "{{ url_for('login') }}";  // 로그아웃 후 로그인 페이지로 리디렉션
+        };
+    
+        // 히스토리 스택에 현재 페이지를 추가하고 뒤로 가기를 막기
+        window.history.pushState(null, null, location.href);  // 현재 페이지 상태를 히스토리에 추가
+    
+        // 뒤로 가기를 막고 로그아웃 팝업을 띄우는 함수
+        window.onpopstate = function() {
+            history.go(1);  // 뒤로 가기를 막고
+            showLogoutModal();  // 로그아웃 팝업 띄우기
+        };
+    </script>    
+</body>
 </html>

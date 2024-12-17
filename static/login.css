@@ -1,0 +1,106 @@
+/* OTF 폰트 등록 */
+@font-face {
+    font-family: 'BMEULJIRO';
+    src: url('./fonts/BMEULJIRO.otf') format('opentype'); /* OTF 파일 적용 */
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* 전체 페이지 공통 스타일 */
+body {
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* OTF 폰트 우선 적용 */
+    text-align: center;
+    background-color: #f0f8ff; /* 부드러운 파스텔 블루 */
+    margin: 0;
+    padding: 0;
+}
+
+/* 로그인 컨테이너 스타일 */
+.container {
+    margin-top: 80px;
+    background-color: #fff0f5; /* 연핑크 톤 */
+    padding: 40px;
+    border-radius: 15px;
+    width: 400px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 제목 스타일 */
+h1 {
+    color: #333;
+    font-size: 35px;
+    margin-bottom: 20px;
+    font-family: 'BMEULJIRO', Arial, sans-serif;
+}
+
+/* 입력 필드 스타일 */
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    font-size: 16px;
+    border: 2px solid #ffb6c1;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* 일반 입력 필드에 폰트 적용 */
+}
+
+/* 비밀번호 입력 필드 스타일 (시스템 폰트 적용) */
+input[type="password"] {
+    font-family: sans-serif; /* 비밀번호 필드는 시스템 폰트로 적용 */
+    color: #333;
+    background-color: #fff;
+}
+
+/* 에러 메시지 스타일 */
+.error {
+    color: red;
+    font-size: 12px;
+    margin: 5px 0;
+    text-align: left;
+    font-family: 'BMEULJIRO', Arial, sans-serif;
+}
+
+/* 버튼 그룹 스타일 */
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+/* 버튼 공통 스타일 */
+button, .secondary-btn {
+    display: inline-block;
+    padding: 12px 20px;
+    font-size: 16px;
+    text-align: center;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    font-weight: bold;
+    font-family: 'BMEULJIRO', Arial, sans-serif;
+}
+
+/* 기본 버튼 */
+button {
+    background-color: #ffc0cb;
+    color: white;
+    border: none;
+}
+
+button:hover {
+    background-color: #ffb6c1;
+}
+
+/* 보조 버튼 */
+.secondary-btn {
+    background-color: #e0ffff;
+    color: #333;
+}
+
+.secondary-btn:hover {
+    background-color: #b0e0e6;
+}

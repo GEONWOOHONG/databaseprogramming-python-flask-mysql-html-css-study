@@ -29,94 +29,72 @@ def generate_words(user_id):
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    # 사용자 스코어 가져오기
-    cursor.execute("SELECT char_score FROM user_scores WHERE user_id = %s", (user_id,))
-    result = cursor.fetchone()
+    try:
+        # 사용자 스코어 가져오기
+        cursor.execute("SELECT char_score FROM user_scores WHERE user_id = %s", (user_id,))
+        result = cursor.fetchone()
 
-    if result:
-        # JSON 데이터를 딕셔너리로 변환
-        char_score = json.loads(result[0])
+        frequent_words = set()
+        if result:
+            char_score = json.loads(result[0])
 
-        # 음수 스코어 필터링 및 정렬
-        negative_scores = {char: score for char, score in char_score.items() if score < 0}
-        if negative_scores:
-            sorted_chars = sorted(negative_scores.items(), key=lambda x: x[1])  # 스코어 기준 정렬
-            grouped_chars = {}
-            for char, score in sorted_chars:
-                grouped_chars.setdefault(score, []).append(char)
+            # 음수 스코어가 있는 글자만 정렬
+            low_score_chars = sorted(
+                [char for char, score in char_score.items() if score < 0],
+                key=lambda x: char_score[x]
+            )[:4]  # 상위 4개 글자만 선택
 
-            # 동일한 스코어 그룹에서 랜덤 순서로 글자를 선택
-            selected_chars = []
-            for score, chars in grouped_chars.items():
-                random.shuffle(chars)  # 랜덤으로 섞기
-                selected_chars.extend(chars)
+            # 각 상위 글자별 최대 3개의 단어 가져오기
+            for char in low_score_chars:
+                cursor.execute("""
+                    SELECT DISTINCT word 
+                    FROM three_words 
+                    WHERE letter1 = %s OR letter2 = %s OR letter3 = %s 
+                    LIMIT 3
+                """, (char, char, char))
+                words = [row[0] for row in cursor.fetchall()]
+                frequent_words.update(words)
 
-            # 상위 4개 글자를 선택
-            low_score_chars = selected_chars[:4]
-        else:
-            # 음수 스코어가 없는 경우 20개 랜덤 단어 반환
-            cursor.execute("SELECT word FROM three_words ORDER BY RAND() LIMIT 20")
-            random_words = [row[0] for row in cursor.fetchall()]
-            connection.close()
-            return random_words
-    else:
-        # 스코어 데이터가 없으면 랜덤 단어 20개 반환
-        cursor.execute("SELECT word FROM three_words ORDER BY RAND() LIMIT 20")
+            # 부족한 단어를 다른 상위 글자에서 가져오기
+            for char in low_score_chars:
+                while len(frequent_words) < 12:
+                    cursor.execute("""
+                        SELECT DISTINCT word 
+                        FROM three_words 
+                        WHERE (letter1 = %s OR letter2 = %s OR letter3 = %s) 
+                        AND word NOT IN %s
+                        LIMIT 1
+                    """, (char, char, char, tuple(frequent_words) if frequent_words else ("",)))
+                    word = cursor.fetchone()
+                    if word:
+                        frequent_words.add(word[0])
+                    else:
+                        break  # 더 이상 가져올 단어가 없으면 종료
+
+        # 상위 글자에 포함되지 않는 랜덤 단어 8개 가져오기
+        excluded_words = tuple(frequent_words) if frequent_words else ("",)
+        cursor.execute("""
+            SELECT DISTINCT word 
+            FROM three_words 
+            WHERE word NOT IN %s 
+            ORDER BY RAND() 
+            LIMIT 8
+        """, (excluded_words,))
         random_words = [row[0] for row in cursor.fetchall()]
+
+        # 스코어가 없는 경우: 랜덤 단어 20개 가져오기
+        if not frequent_words:
+            cursor.execute("SELECT word FROM three_words ORDER BY RAND() LIMIT 20")
+            frequent_words.update(row[0] for row in cursor.fetchall())
+            random_words = []
+
+    finally:
         connection.close()
-        return random_words
 
-    # 상위 4개 글자를 포함하는 단어 추출
-    frequent_words = []
-    for char in low_score_chars:
-        cursor.execute("SELECT word FROM three_words WHERE letter1 = %s OR letter2 = %s OR letter3 = %s LIMIT 3", (char, char, char))
-        frequent_words.extend([row[0] for row in cursor.fetchall()])
-
-    # 부족한 경우 상위 글자 단어로 추가
-    while len(frequent_words) < 12:
-        cursor.execute("SELECT word FROM three_words WHERE letter1 IN %s OR letter2 IN %s OR letter3 IN %s LIMIT %s",
-                       (tuple(low_score_chars), tuple(low_score_chars), tuple(low_score_chars), 12 - len(frequent_words)))
-        frequent_words.extend([row[0] for row in cursor.fetchall()])
-
-    # 랜덤 단어 8개 추출 (상위 글자 단어 제외)
-    cursor.execute("SELECT word FROM three_words WHERE word NOT IN %s ORDER BY RAND() LIMIT 8", (tuple(frequent_words),))
-    random_words = [row[0] for row in cursor.fetchall()]
-
-    connection.close()
-
-    # 섞어서 반환: 자주 틀리는 단어 + 랜덤 단어
-    combined_words = []
-    for i in range(12):
-        combined_words.append(frequent_words[i])
-        if i < 8:
-            combined_words.append(random_words[i])
-    return combined_words
-
-    # 상위 4개 글자를 포함하는 단어 추출
-    frequent_words = []
-    for char in low_score_chars:
-        cursor.execute("SELECT word FROM three_words WHERE letter1 = %s OR letter2 = %s OR letter3 = %s LIMIT 3", (char, char, char))
-        frequent_words.extend([row[0] for row in cursor.fetchall()])
-
-    # 부족한 경우 상위 글자 단어로 추가
-    while len(frequent_words) < 12:
-        cursor.execute("SELECT word FROM three_words WHERE letter1 IN %s OR letter2 IN %s OR letter3 IN %s LIMIT %s",
-                       (tuple(low_score_chars), tuple(low_score_chars), tuple(low_score_chars), 12 - len(frequent_words)))
-        frequent_words.extend([row[0] for row in cursor.fetchall()])
-
-    # 랜덤 단어 8개 추출 (상위 글자 단어 제외)
-    cursor.execute("SELECT word FROM three_words WHERE word NOT IN %s ORDER BY RAND() LIMIT 8", (tuple(frequent_words),))
-    random_words = [row[0] for row in cursor.fetchall()]
-
-    connection.close()
-
-    # 섞어서 반환: 자주 틀리는 단어 + 랜덤 단어
-    combined_words = []
-    for i in range(12):
-        combined_words.append(frequent_words[i])
-        if i < 8:
-            combined_words.append(random_words[i])
-    return combined_words
+    # 최종 단어 리스트: 12개 단어 + 8개 랜덤 단어
+    final_words = list(frequent_words)[:12] + random_words
+    random.shuffle(final_words)  # 섞어서 반환
+    return final_words
 
 # 게임 메인 페이지
 @game_blueprint.route("/index", methods=["GET", "POST"])
@@ -170,38 +148,30 @@ def check_word():
     if "user_id" not in session:
         return jsonify({"success": False, "message": "Unauthorized"})
 
-    # current_index가 random_words의 범위를 초과하지 않는지 확인
-    if current_index >= len(random_words):
-        return jsonify({"success": False, "message": "Index out of range"})
+    if current_index >= len(random_words):  # 범위 초과 방지
+        return jsonify({"success": True, "completed": True})
 
-    user_input = request.json.get("user_input", "").strip()  # 공백 제거
+    user_input = request.json.get("user_input", "").strip()
     current_word = random_words[current_index]
 
-    # 입력값을 현재 단어 길이까지만 자르기
-    user_input = user_input[:len(current_word)]
+    user_input = user_input[:len(current_word)]  # 입력값 길이 제한
 
-    # 글자 비교 결과를 저장
-    word_result = []
-    for i in range(len(current_word)):
-        if i < len(user_input) and user_input[i] == current_word[i]:
-            word_result.append(1)
-        else:
-            word_result.append(0)
+    # 글자 비교 결과
+    word_result = [1 if i < len(user_input) and user_input[i] == current_word[i] else 0 
+                   for i in range(len(current_word))]
     total_correct.append(word_result)
-    total_characters += len(current_word)  # 총 글자 수는 현재 단어의 길이만 반영
+    total_characters += len(current_word)
 
     current_index += 1
 
-    # current_index가 random_words의 길이를 초과하면 완료 응답 반환
-    if current_index >= len(random_words):
+    if current_index >= len(random_words):  # 마지막 단어 처리
         return jsonify({"success": True, "completed": True})
 
-    # 다음 단어 및 정확도 계산
+    # 다음 단어 반환
     next_word = random_words[current_index]
     accuracy = (sum([sum(word) for word in total_correct]) / total_characters) * 100 if total_characters > 0 else 0
 
     return jsonify({"success": True, "completed": False, "next_word": next_word, "current_index": current_index + 1, "accuracy": accuracy})
-
 
 # user_scores 테이블 업데이트 함수
 def update_user_scores(user_id, words, total_correct):
@@ -270,10 +240,41 @@ def restart_game():
         return redirect(url_for("login"))
 
     user_id = session["user_id"]
-    random_words = generate_words(user_id)
+    random_words = generate_words(user_id)  # 새 단어 리스트 생성
 
     current_index = 0
     start_time = time.time()  # 게임 시작 시간 초기화
     total_correct = []
     total_characters = 0
     return redirect(url_for("game.play_game"))
+
+# 사용자 데이터베이스에서 가장 잘 맞춘 글자와 가장 어려운 글자 추출
+@game_blueprint.route("/get_user_score_data", methods=["GET"])
+def get_user_score_data():
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "Unauthorized"})
+
+    user_id = session["user_id"]
+
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    # 사용자 스코어 가져오기
+    cursor.execute("SELECT char_score FROM user_scores WHERE user_id = %s", (user_id,))
+    result = cursor.fetchone()
+
+    if not result:
+        connection.close()
+        return jsonify({"success": False, "message": "No score data available."})
+
+    char_score = json.loads(result[0])
+
+    # 잘 맞춘 글자 상위 4개
+    best_chars = sorted(char_score.items(), key=lambda x: x[1], reverse=True)[:4]
+
+    # 어려운 글자 하위 4개
+    worst_chars = sorted(char_score.items(), key=lambda x: x[1])[:4]
+
+    connection.close()
+
+    return jsonify({"success": True, "best_chars": best_chars, "worst_chars": worst_chars})

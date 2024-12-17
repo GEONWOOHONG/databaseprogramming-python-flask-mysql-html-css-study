@@ -1,0 +1,212 @@
+/* OTF 폰트 등록 */
+@font-face {
+    font-family: 'BMEULJIRO';
+    src: url('./fonts/BMEULJIRO.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'BMHANNA_11yrs';
+    src: url('./fonts/BMHANNA_11yrs_otf.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* 전체 페이지 공통 스타일 */
+body {
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* OTF 폰트 우선 적용 */
+    text-align: center;
+    background-color: #f0f8ff; /* 부드러운 파스텔 블루 */
+    margin: 0;
+    padding: 0;
+}
+
+/* 메인 게임 컨테이너 스타일 */
+.game-container {
+    margin-top: 80px;
+    background-color: #fff0f5; /* 연핑크 배경 */
+    padding: 30px 40px 10px; /* 여백 조정 */
+    border-radius: 15px;
+    width: 600px; /* 너비 확대 */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 단어 박스 스타일 */
+.word-box {
+    background-color: #ffb6c1; /* 연핑크 */
+    color: #fff;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 15px;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.word-label {
+    font-size: 30px;
+    margin-bottom: 5px;
+    color: #fff;
+}
+
+#current-word {
+    font-size: 100px;
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+    line-height: 1.2;
+    margin-top: 10px;
+    font-family: Arial, sans-serif; /* 새로운 폰트 적용 */
+}
+
+/* 입력 필드 스타일 */
+#user-input {
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 0;
+    font-size: 18px;
+    padding: 10px;
+    width: 80%;
+    border: 2px solid #ffb6c1;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* 폰트 적용 */
+}
+
+/* 진행률 바 스타일 */
+.progress-container {
+    width: 100%;
+    height: 15px;
+    background-color: #fff0f5;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+#progress-bar {
+    width: 0;
+    height: 100%;
+    background-color: #ffb6c1;
+    transition: width 0.3s ease;
+}
+
+/* 경과 시간 및 정확도 박스 */
+.stats-box {
+    position: absolute;
+    top: 55%;
+    transform: translateY(-50%);
+    left: calc(50% - 340px);
+    background-color: #fff0f5;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 200px;
+    text-align: center;
+    color: #333;
+    font-weight: bold;
+    line-height: 1.5;
+}
+
+.stats-box p {
+    margin: 5px 0;
+}
+
+/* 팝업 모달 배경 */
+#exit-warning-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* 팝업 모달 창 */
+.modal-content {
+    background-color: #fff0f5;
+    padding: 30px 40px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    width: 400px;
+    max-width: 90%;
+    animation: popup 0.3s ease-in-out forwards;
+}
+
+@keyframes popup {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-content h2 {
+    color: #333;
+    font-size: 26px;
+    margin-bottom: 10px;
+}
+
+.modal-content p {
+    color: #555;
+    font-size: 15px;
+    margin-bottom: 25px;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.button-container button {
+    flex: 1;
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* 폰트 적용 */
+}
+
+#cancel-exit {
+    background-color: #ffc0cb;
+    color: white;
+}
+
+#cancel-exit:hover {
+    background-color: #ffb6c1;
+}
+
+#retry-exit {
+    background-color: #e0ffff;
+    color: #333;
+}
+
+#retry-exit:hover {
+    background-color: #b0e0e6;
+}
+
+#confirm-exit {
+    background-color: #ffc0cb;
+    color: white;
+}
+
+#confirm-exit:hover {
+    background-color: #ffb6c1;
+}

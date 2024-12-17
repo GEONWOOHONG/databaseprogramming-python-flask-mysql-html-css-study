@@ -15,6 +15,16 @@ try:
     # 커서 생성
     cur = db.cursor()
 
+    three_words_table_query = """
+        CREATE TABLE IF NOT EXISTS three_words (
+        id INT AUTO_INCREMENT PRIMARY KEY, -- 단어 고유 ID
+        word VARCHAR(10) NOT NULL,         -- 단어
+        letter1 VARCHAR(5) NOT NULL,       -- 첫 번째 글자
+        letter2 VARCHAR(5) NOT NULL,       -- 두 번째 글자
+        letter3 VARCHAR(5) NOT NULL        -- 세 번째 글자
+        );
+    """
+    
     # users 테이블 생성 쿼리
     users_table_query = """
         CREATE TABLE IF NOT EXISTS users (
@@ -34,18 +44,12 @@ try:
             FOREIGN KEY (user_id) REFERENCES users(id) -- users 테이블의 id와 연결
         );
     """
-
-    # """
-    # CREATE TABLE IF NOT EXISTS three_words (
-    #     id INT AUTO_INCREMENT PRIMARY KEY, -- 단어 고유 ID
-    #     word VARCHAR(10) NOT NULL,         -- 단어
-    #     letter1 VARCHAR(5) NOT NULL,       -- 첫 번째 글자
-    #     letter2 VARCHAR(5) NOT NULL,       -- 두 번째 글자
-    #     letter3 VARCHAR(5) NOT NULL        -- 세 번째 글자
-    # );
-    # """
     
     try:
+        # three_words 테이블 생성
+        cur.execute(three_words_table_query)
+        print("three_words 테이블 생성 완료")
+
         # users 테이블 생성
         cur.execute(users_table_query)
         print("users 테이블 생성 완료")

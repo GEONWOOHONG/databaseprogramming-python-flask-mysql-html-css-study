@@ -1,0 +1,64 @@
+/* OTF 폰트 등록 */
+@font-face {
+    font-family: 'BMEULJIRO';
+    src: url('./fonts/BMEULJIRO.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* 전체 페이지 공통 스타일 */
+body {
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* BMEULJIRO 폰트 우선 적용 */
+    text-align: center;
+    background-color: #f0f8ff; /* 부드러운 파스텔 블루 */
+    margin: 0;
+    padding: 0;
+}
+
+/* 결과 페이지 메인 컨테이너 */
+.container {
+    margin-top: 80px;
+    background-color: #fff0f5; /* 연핑크 배경 */
+    padding: 40px;
+    border-radius: 15px;
+    width: 400px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 제목 스타일 */
+h1 {
+    color: #333;
+    font-size: 35px;
+    margin-bottom: 20px;
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* 폰트 적용 */
+}
+
+/* 결과 텍스트 스타일 */
+p {
+    color: #555;
+    font-size: 18px;
+    margin: 10px 0;
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* 폰트 적용 */
+}
+
+/* 버튼 스타일 */
+.btn {
+    display: inline-block;
+    padding: 12px 20px;
+    font-size: 16px;
+    text-align: center;
+    background-color: #ffc0cb; /* 연핑크 */
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    margin: 10px 5px;
+    transition: background-color 0.2s ease;
+    font-weight: bold;
+    font-family: 'BMEULJIRO', Arial, sans-serif; /* 폰트 적용 */
+}
+
+.btn:hover {
+    background-color: #ffb6c1; /* 강조된 핑크 */
+}
