@@ -6,16 +6,42 @@
     <title>단어 입력</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
+<!-- 팝업 모달 -->
+<div id="exit-warning-modal" style="display: none;">
+    <div class="modal-content">
+        <h2>정말 이동할까요?</h2>
+        <p>현재 진행중인 연습은 저장되지 않습니다.</p>
+        <div class="button-container">
+            <button id="cancel-exit">취소하기</button>
+            <button id="retry-exit">다시하기</button>
+            <button id="confirm-exit">이동하기</button>
+        </div>
+    </div>
+</div>
+
 <body data-elapsed-time="{{ elapsed_time }}">
-    <div class="container">
-        <h1>단어 연습 중</h1>
-        <p>현재 단어 (<span id="current-index">{{ current_index }}</span>/20): <strong id="current-word">{{ current_word }}</strong></p>
+    <div class="game-container">
+        <!-- 기존 연핑크 박스 내용 -->
+        <div class="word-box">
+            <p class="word-label">입력할 단어</p>
+            <span id="current-word">{{ current_word }}</span>
+        </div>
+    
+        <form id="typing-form">
+            <input type="text" id="user-input" placeholder="" autofocus>
+        </form>
+    
+        <!-- 게이지 바 -->
+        <div class="progress-container">
+            <div id="progress-bar" style="width: 0%;"></div>
+        </div>
+    </div>
+    
+    <!-- 경과 시간과 정확도 -->
+    <div class="stats-box">
         <p>경과 시간: <span id="elapsed-time">{{ '%02d:%02d' % (elapsed_time // 60, elapsed_time % 60) }}</span></p>
         <p>정확도: <span id="accuracy">{{ "%.2f" % accuracy }}%</span></p>
-        <form id="typing-form">
-            <input type="text" id="user-input" placeholder="단어를 입력하세요" autofocus>
-            <button type="submit">입력</button>
-        </form>
     </div>
     <script>
         const elapsedTimeElement = document.getElementById("elapsed-time");
@@ -24,17 +50,32 @@
         const currentIndexElement = document.getElementById("current-index");
         const userInputElement = document.getElementById("user-input");
         const typingForm = document.getElementById("typing-form");
-        
+        const exitWarningModal = document.getElementById("exit-warning-modal");
+        const cancelExitButton = document.getElementById("cancel-exit");
+        const retryExitButton = document.getElementById("retry-exit");
+        const confirmExitButton = document.getElementById("confirm-exit");
+
         let isProcessing = false; // 이중 실행 방지를 위한 플래그
         let elapsedSeconds = parseInt(document.body.getAttribute("data-elapsed-time"), 10);
+        let timer; // 타이머 핸들러 변수
+        
+        // 실시간 타이머 시작 함수
+        function startTimer() {
+            timer = setInterval(() => {
+                elapsedSeconds++;
+                const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
+                const seconds = String(elapsedSeconds % 60).padStart(2, "0");
+                elapsedTimeElement.textContent = `${minutes}:${seconds}`;
+            }, 1000);
+        }
 
-        // 실시간 타이머
-        setInterval(() => {
-            elapsedSeconds++;
-            const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
-            const seconds = String(elapsedSeconds % 60).padStart(2, "0");
-            elapsedTimeElement.textContent = `${minutes}:${seconds}`;
-        }, 1000);
+        // 타이머 정지 함수
+        function stopTimer() {
+            clearInterval(timer);
+        }
+
+        // 게임 시작 시 타이머 실행
+        startTimer();
 
         // 단어 입력 처리
         typingForm.addEventListener("submit", async (event) => {
@@ -60,14 +101,28 @@
             const userInput = userInputElement.value.trim();
             const requiredLength = currentWordElement.textContent.length;
 
-            if (isProcessing) return; // 이미 처리 중이면 무시
+            // 이미 처리 중이거나 입력이 비어있으면 리턴
+            if (isProcessing || userInput.length === 0) return;
 
-            // 자동 제출 조건: 입력 글자 수가 요구 길이를 초과할 경우
-            if (userInput.length > requiredLength) {
-                isProcessing = true; // 처리 플래그 설정
-                userInputElement.value = userInput.substring(0, requiredLength); // 초과 글자 잘라내기
-                await processInput(userInputElement.value);
-                isProcessing = false; // 처리 플래그 해제
+            // 자동 제출 조건: 입력 글자 수가 요구 길이를 초과한 경우만
+            if (userInput.length > requiredLength) { 
+                isProcessing = true; // 처리 시작
+
+                // 입력 필드 이벤트 비활성화
+                userInputElement.disabled = true;
+
+                // 입력값을 정확한 길이로 잘라서 제출
+                userInputElement.value = userInput.substring(0, requiredLength);
+
+                try {
+                    await processInput(userInputElement.value);
+                } finally {
+                    // 입력 필드 초기화 및 포커스 재설정
+                    userInputElement.value = "";
+                    userInputElement.disabled = false; // 이벤트 활성화
+                    userInputElement.focus();
+                    isProcessing = false; // 처리 완료
+                }
             }
         });
 
@@ -89,20 +144,23 @@
 
         // 게임 UI 업데이트 함수
         function updateGameUI(result) {
-            // 입력 필드 값 강제 초기화
-            userInputElement.value = "";
+        // 입력 필드 값 강제 초기화
+        userInputElement.value = "";
 
-            // UI 업데이트
-            currentWordElement.textContent = result.next_word;
-            currentIndexElement.textContent = result.current_index;
-            accuracyElement.textContent = `${result.accuracy.toFixed(2)}%`;
+        // UI 업데이트
+        currentWordElement.textContent = result.next_word;
+        accuracyElement.textContent = `${result.accuracy.toFixed(2)}%`;
 
-            // 포커스 강제 재설정
-            setTimeout(() => {
-                userInputElement.value = ""; // 브라우저 입력 버퍼 완전 초기화
-                userInputElement.focus();   // 포커스 재설정
-            }, 0);
-        }
+        // 게이지바 업데이트
+        const progress = (result.current_index / 20) * 100;  // 진행률 계산
+        document.getElementById("progress-bar").style.width = `${progress}%`;
+
+        // 포커스 강제 재설정
+        setTimeout(() => {
+            userInputElement.value = ""; // 브라우저 입력 버퍼 완전 초기화
+            userInputElement.focus();   // 포커스 재설정
+        }, 0);
+    }
 
         // 스페이스바 입력 방지
         userInputElement.addEventListener("keydown", (event) => {
@@ -118,6 +176,54 @@
 
         // 이전 입력 기록 방지
         userInputElement.setAttribute("autocomplete", "off"); // 브라우저 자동완성 비활성화
+
+        let isExitAttempt = false; // 나가기 시도 상태
+
+        // 브라우저 뒤로 가기 감지
+        window.history.pushState(null, null, location.href);
+        window.addEventListener("popstate", () => {
+            if (!isExitAttempt) {
+                showExitWarning();
+                window.history.pushState(null, null, location.href); // 다시 현재 페이지로 push
+            }
+        });
+
+        // URL 변경 방지 (대부분의 URL 이동 시 모달 표시)
+        document.addEventListener("click", (e) => {
+            const target = e.target.closest("a"); // 링크 클릭 감지
+            if (target && target.href) {
+                e.preventDefault(); // 링크 이동 방지
+                showExitWarning(target.href); // 모달 띄우기
+            }
+        });
+
+        // 모달 표시 함수 (타이머 정지 포함)
+        function showExitWarning(targetUrl = null) {
+            stopTimer(); // 타이머 멈춤
+            exitWarningModal.style.display = "block";
+
+            // 취소하기 버튼: 모달 닫고 타이머 재시작
+            cancelExitButton.onclick = () => {
+                exitWarningModal.style.display = "none";
+                startTimer(); // 타이머 재시작
+                isExitAttempt = false;
+            };
+
+            // 다시하기 버튼: 페이지 새로고침
+            retryExitButton.onclick = () => {
+                location.reload();
+            };
+
+            // 이동하기 버튼: 실제로 페이지 나감
+            confirmExitButton.onclick = () => {
+                isExitAttempt = true; // 이동 상태를 true로 설정
+                if (targetUrl) {
+                    window.location.href = targetUrl;
+                } else {
+                    window.history.back();
+                }
+            };
+        }
     </script>    
 </body>
 </html>

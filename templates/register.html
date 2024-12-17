@@ -9,36 +9,87 @@
 <body>
     <div class="container">
         <h1>회원가입</h1>
-        <form method="POST">
+        <form id="register-form" method="POST" onsubmit="return validateForm();">
+            <!-- 닉네임 입력 -->
             <div class="form-group">
-                <input type="text" name="nickname" placeholder="닉네임" value="{{ form_data.get('nickname', '') }}" required autocomplete="off">
-                {% if error_messages.get('nickname') %}
-                <p class="error">{{ error_messages['nickname'] }}</p>
-                {% endif %}
+                <input type="text" name="nickname" id="nickname" placeholder="닉네임" value="{{ form_data.get('nickname', '') }}" autocomplete="off">
+                <p class="error" id="nickname-error">{{ error_messages.get('nickname', '') }}</p>
             </div>
+
+            <!-- 아이디 입력 -->
             <div class="form-group">
-                <input type="text" name="username" placeholder="아이디" value="{{ form_data.get('username', '') }}" required autocomplete="off">
-                {% if error_messages.get('username') %}
-                <p class="error">{{ error_messages['username'] }}</p>
-                {% endif %}
+                <input type="text" name="username" id="username" placeholder="아이디" value="{{ form_data.get('username', '') }}" autocomplete="off">
+                <p class="error" id="username-error">{{ error_messages.get('username', '') }}</p>
             </div>
+
+            <!-- 비밀번호 입력 -->
             <div class="form-group">
-                <input type="password" name="password" placeholder="비밀번호" required autocomplete="off">
-                {% if error_messages.get('password') %}
-                <p class="error">{{ error_messages['password'] }}</p>
-                {% endif %}
+                <input type="password" name="password" id="password" placeholder="비밀번호" autocomplete="off">
+                <p class="error" id="password-error">{{ error_messages.get('password', '') }}</p>
             </div>
+
+            <!-- 비밀번호 재입력 -->
             <div class="form-group">
-                <input type="password" name="confirm_password" placeholder="비밀번호 재입력" required autocomplete="off">
-                {% if error_messages.get('confirm_password') %}
-                <p class="error">{{ error_messages['confirm_password'] }}</p>
-                {% endif %}
+                <input type="password" name="confirm_password" id="confirm_password" placeholder="비밀번호 재입력" autocomplete="off">
+                <p class="error" id="confirm-password-error">{{ error_messages.get('confirm_password', '') }}</p>
             </div>
+
+            <!-- 버튼 그룹 -->
             <div class="button-group">
                 <button type="submit" class="primary-btn">회원가입</button>
                 <a href="{{ url_for('login') }}" class="secondary-btn">로그인으로 돌아가기</a>
             </div>
         </form>
     </div>
+
+    <script>
+        function validateForm() {
+            let isValid = true;
+
+            // 각 입력 필드 가져오기
+            const nickname = document.getElementById("nickname");
+            const username = document.getElementById("username");
+            const password = document.getElementById("password");
+            const confirmPassword = document.getElementById("confirm_password");
+
+            // 각 오류 메시지 필드 가져오기
+            const nicknameError = document.getElementById("nickname-error");
+            const usernameError = document.getElementById("username-error");
+            const passwordError = document.getElementById("password-error");
+            const confirmPasswordError = document.getElementById("confirm-password-error");
+
+            // 오류 메시지 초기화
+            nicknameError.textContent = "";
+            usernameError.textContent = "";
+            passwordError.textContent = "";
+            confirmPasswordError.textContent = "";
+
+            // 입력값 검증
+            if (nickname.value.trim() === "") {
+                nicknameError.textContent = "닉네임을 입력하세요.";
+                isValid = false;
+            }
+
+            if (username.value.trim() === "") {
+                usernameError.textContent = "아이디를 입력하세요.";
+                isValid = false;
+            }
+
+            if (password.value.trim() === "") {
+                passwordError.textContent = "비밀번호를 입력하세요.";
+                isValid = false;
+            }
+
+            if (confirmPassword.value.trim() === "") {
+                confirmPasswordError.textContent = "비밀번호 재입력을 입력하세요.";
+                isValid = false;
+            } else if (confirmPassword.value !== password.value) {
+                confirmPasswordError.textContent = "비밀번호가 일치하지 않습니다.";
+                isValid = false;
+            }
+
+            return isValid; // 폼 제출 여부 결정
+        }
+    </script>
 </body>
 </html>

@@ -1,8 +1,19 @@
+from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import pymysql
 import hashlib
 import re
 from game import game_blueprint  # 게임 블루프린트 임포트
+
+# 로그인 상태 확인 데코레이터
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user_id" not in session:
+            flash("로그인이 필요합니다.")
+            return redirect(url_for("login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # 세션 암호화 키
@@ -133,6 +144,13 @@ def check_username():
 
 # 게임 블루프린트 등록
 app.register_blueprint(game_blueprint, url_prefix="/game")
+
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 if __name__ == "__main__":
     app.run(debug=True)

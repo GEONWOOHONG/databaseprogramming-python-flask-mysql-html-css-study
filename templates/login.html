@@ -41,8 +41,6 @@
         const passwordError = document.getElementById("password-error");
         const nextUsernameButton = document.getElementById("next-username");
 
-        let isPasswordStepActive = false; // 비밀번호 입력창 활성화 여부
-
         // 아이디 검증 및 비밀번호 입력칸 보여주기
         nextUsernameButton.addEventListener("click", checkUsername);
 
@@ -52,6 +50,8 @@
                 nextUsernameButton.click();
             }
         });
+
+        let isPasswordStepActive = false; // 비밀번호 입력창 활성화 여부
 
         function checkUsername() {
             const username = usernameInput.value.trim();
@@ -69,15 +69,13 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // 히스토리 상태 추가
                     history.pushState({ step: "password" }, "", window.location.href);
 
                     usernameStep.style.display = "none";
                     passwordStep.style.display = "block";
+                    passwordInput.value = ""; // 비밀번호 입력 초기화
                     passwordInput.focus();
-
-                    // 비밀번호 입력창 활성화 플래그 설정
-                    isPasswordStepActive = true;
+                    isPasswordStepActive = true; // 비밀번호 입력 활성화
                 } else {
                     usernameError.textContent = "계정을 찾을 수 없습니다.";
                 }
@@ -87,28 +85,52 @@
             });
         }
 
-        // 뒤로 가기 이벤트 감지
+        function validateForm() {
+            if (!isPasswordStepActive) return false;
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (password === "") {
+                passwordError.textContent = "비밀번호를 입력하세요.";
+                return false;
+            }
+
+            fetch("/", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url; // 성공 시 리다이렉트
+                } else {
+                    passwordError.textContent = "잘못된 비밀번호입니다.";
+                    passwordInput.value = ""; // 비밀번호 필드 초기화
+                    passwordInput.focus();
+                    isPasswordStepActive = true; // 비밀번호 입력 재활성화
+                }
+            })
+            .catch(() => {
+                passwordError.textContent = "서버와의 통신 오류가 발생했습니다.";
+            });
+
+            return false; // 폼 기본 제출 방지
+        }
+
+        // 뒤로 가기 시 상태 복구
         window.addEventListener("popstate", function(event) {
             if (event.state && event.state.step === "password") {
                 usernameStep.style.display = "none";
                 passwordStep.style.display = "block";
+                isPasswordStepActive = true;
             } else {
                 usernameStep.style.display = "block";
                 passwordStep.style.display = "none";
+                isPasswordStepActive = false;
             }
         });
 
-        // 비밀번호 검증
-        function validateForm() {
-            if (!isPasswordStepActive) return false; // 비밀번호 입력창이 활성화되지 않았으면 아무 작업도 하지 않음
-
-            const password = passwordInput.value.trim();
-            if (password === "") {
-                passwordError.textContent = "비밀번호를 입력하세요.";
-                return false;  // 폼 제출 방지
-            }
-            return true;
-        }
 
         // 비밀번호 입력 시 에러 메시지 초기화
         passwordInput.addEventListener("input", function () {

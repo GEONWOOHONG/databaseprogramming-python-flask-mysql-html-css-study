@@ -177,6 +177,9 @@ def check_word():
     user_input = request.json.get("user_input", "").strip()  # 공백 제거
     current_word = random_words[current_index]
 
+    # 입력값을 현재 단어 길이까지만 자르기
+    user_input = user_input[:len(current_word)]
+
     # 글자 비교 결과를 저장
     word_result = []
     for i in range(len(current_word)):
@@ -185,7 +188,7 @@ def check_word():
         else:
             word_result.append(0)
     total_correct.append(word_result)
-    total_characters += len(current_word)
+    total_characters += len(current_word)  # 총 글자 수는 현재 단어의 길이만 반영
 
     current_index += 1
 
