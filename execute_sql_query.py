@@ -45,6 +45,20 @@ try:
         );
     """
     
+    game_results_table_query = """
+        CREATE TABLE IF NOT EXISTS game_results (
+        id INT AUTO_INCREMENT PRIMARY KEY,             -- 게임 기록의 고유 ID
+        user_id INT NOT NULL,                          -- 사용자 ID
+        elapsed_time INT NOT NULL,                     -- 소요 시간 (초 단위)
+        accuracy FLOAT NOT NULL,                       -- 정확도 (퍼센트 값)
+        custom_words JSON,                             -- 맞춤형 단어 리스트 (JSON 형식)
+        random_words JSON,                             -- 랜덤 단어 리스트 (JSON 형식)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,-- 기록 생성 시간
+        is_completed BOOLEAN DEFAULT FALSE,            -- 게임이 정상적으로 종료됐는지 판단
+        FOREIGN KEY (user_id) REFERENCES users(id)     -- users 테이블 참조
+    );
+    """
+
     try:
         # three_words 테이블 생성
         cur.execute(three_words_table_query)
@@ -58,6 +72,9 @@ try:
         cur.execute(user_scores_table_query)
         print("user_scores 테이블 생성 완료")
 
+        cur.execute(game_results_table_query)
+        print("game_results 테이블 생성 완료")
+        
         # 커밋
         db.commit()
         print("데이터베이스 커밋 완료")

@@ -81,7 +81,7 @@ button:hover {
 .user-score-box p {
     font-size: 18px;
     font-weight: bold;
-    color: #333;
+    color: #555;
     font-family: 'BMEULJIRO', Arial, sans-serif;
 }
 
@@ -177,4 +177,103 @@ button:hover {
 }
 #confirm-logout:hover {
     background-color: #ffb6c1;
+}
+
+/* 이전 기록 박스 스타일 */
+.history-box {
+    padding: 20px;
+    background-color: #fff0f5; /* 연핑크 배경 */
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    width: 440px; /* 기존 너비 유지 */
+    position: absolute;
+    top: 80px; /* 기존 위치 */
+    bottom: 200px; /* 기존 위치 */
+    left: calc(50% + 300px); /* 기존 위치 */
+}
+
+/* 제목 스타일 */
+.history-box h1 {
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 15px;
+    font-family: 'BMEULJIRO', Arial, sans-serif;
+}
+
+/* 열 제목 스타일 */
+.history-headers {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #555;
+    font-family: 'BMEULJIRO', Arial, sans-serif;
+}
+
+/* 날짜 열의 미세한 조정 */
+.history-headers .date-header {
+    margin-left: 60px; /* 날짜 제목 약간 오른쪽으로 */
+}
+
+/* 소요 시간 열의 미세한 조정 */
+.history-headers .date-header {
+    margin-right: 5px; /* 날짜 제목 약간 오른쪽으로 */
+}
+
+/* 정확도 열의 미세한 조정 */
+.history-headers .accuracy-header {
+    margin-right: 55px; /* 정확도 제목 약간 왼쪽으로 */
+}
+
+/* 기록 목록 스타일 */
+.history-box ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.history-box li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin: 5px 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: #f8f8ff; /* 부드러운 파란 배경 */
+    font-family: 'BMEULJIRO', Arial, sans-serif;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.history-box li span {
+    width: 30%; /* 각 열의 간격 */
+    text-align: center;
+}
+
+/* 툴팁 스타일 */
+.tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    max-width: 200px;
+    display: none;
+    z-index: 1000;
+}
+
+.tooltip ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tooltip li {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.history-box li:hover {
+    background-color: #f0f0f0;
 }

@@ -12,7 +12,7 @@
         <p>소요 시간: {{ '%02d:%02d' % (elapsed_time // 60, elapsed_time % 60) }}</p>
         <p>정확도: {{ "%.2f" % accuracy }}%</p>
         <a class="btn" href="{{ url_for('game.index') }}">그만두기</a>
-        <a class="btn" href="{{ url_for('game.restart_game') }}">다시하기</a>
+        <a class="btn" href="{{ url_for('game.restart_game', completed_game=True) }}">다시하기</a>
     </div>
 </body>
 </html>

@@ -99,7 +99,7 @@ body {
 /* 경과 시간 및 정확도 박스 */
 .stats-box {
     position: absolute;
-    top: 55%;
+    top: 60%;
     transform: translateY(-50%);
     left: calc(50% - 340px);
     background-color: #fff0f5;

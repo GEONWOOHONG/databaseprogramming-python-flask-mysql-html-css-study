@@ -42,91 +42,27 @@
         </div>
     </div>
 
+    <div class="history-box">
+        <h1>나의 낱말 기록</h1>
+        <div class="history-headers">
+            <span class="date-header">날짜</span>
+            <span class="time-header">소요 시간</span>
+            <span class="accuracy-header">정확도</span>
+        </div>        
+        <ul id="game-history">
+            <!-- 기록이 동적으로 추가될 예정 -->
+        </ul>
+    </div>    
+
+    <!-- 툴팁을 위한 작은 창 -->
+    <div id="tooltip" class="tooltip" style="display: none;">
+        <div><strong>맞춤형 단어</strong></div>
+        <ul id="custom-words-list"></ul>
+        <div><strong>랜덤 단어</strong></div>
+        <ul id="random-words-list"></ul>
+    </div>
+
     <script>
-        // 페이지가 로드될 때 사용자 점수 데이터 가져오기
-        window.onload = function () {
-            fetch("/game/get_user_score_data")
-                .then(response => response.json())
-                .then(data => {
-                    const bestCharsList = document.getElementById("best-chars");
-                    const worstCharsList = document.getElementById("worst-chars");
-    
-                    // 데이터가 성공적으로 반환된 경우
-                    if (data.success) {
-                        if (data.best_chars.length > 0) {
-                            // 잘 맞춘 글자 - 가로로 표시하며 각 글자를 ""로 묶기
-                            const bestChars = data.best_chars.map(item => `"${item[0]}"`).join(", ");
-                            const bestLi = document.createElement("li");
-                            bestLi.textContent = bestChars;
-                            bestCharsList.appendChild(bestLi);
-                        } else {
-                            // 충분한 기록이 없는 경우
-                            const li = document.createElement("li");
-                            li.textContent = "충분한 기록이 부족합니다.";
-                            li.style.color = "red";
-                            bestCharsList.appendChild(li);
-                        }
-    
-                        if (data.worst_chars.length > 0) {
-                            // 음수 스코어만 필터링하고 가장 낮은 스코어 기준으로 상위 4개 가져오기
-                            const filteredWorstChars = data.worst_chars
-                                .filter(item => item[1] < 0) // 스코어가 음수인 것만 선택
-                                .sort((a, b) => a[1] - b[1]) // 가장 작은 스코어 기준으로 정렬
-                                .slice(0, 4); // 상위 4개 가져오기
-    
-                            if (filteredWorstChars.length > 0) {
-                                const worstChars = filteredWorstChars.map(item => `"${item[0]}"`).join(", ");
-                                const worstLi = document.createElement("li");
-                                worstLi.textContent = worstChars;
-                                worstCharsList.appendChild(worstLi);
-                            } else {
-                                // 음수 스코어가 없는 경우
-                                const li = document.createElement("li");
-                                li.textContent = "충분한 기록이 부족합니다.";
-                                li.style.color = "red";
-                                worstCharsList.appendChild(li);
-                            }
-                        } else {
-                            // 충분한 기록이 없는 경우
-                            const li = document.createElement("li");
-                            li.textContent = "충분한 기록이 부족합니다.";
-                            li.style.color = "red";
-                            worstCharsList.appendChild(li);
-                        }
-                    } else {
-                        // 서버에서 데이터가 없을 때 메시지 출력
-                        const noDataMessage = "충분한 기록이 부족합니다.";
-    
-                        const bestLi = document.createElement("li");
-                        bestLi.textContent = noDataMessage;
-                        bestLi.style.color = "red";
-                        bestCharsList.appendChild(bestLi);
-    
-                        const worstLi = document.createElement("li");
-                        worstLi.textContent = noDataMessage;
-                        worstLi.style.color = "red";
-                        worstCharsList.appendChild(worstLi);
-                    }
-                })
-                .catch(error => {
-                    console.log("Error fetching user score data:", error);
-                    const errorMessage = "데이터를 불러오는 중 오류가 발생했습니다.";
-    
-                    const bestCharsList = document.getElementById("best-chars");
-                    const worstCharsList = document.getElementById("worst-chars");
-    
-                    const bestLi = document.createElement("li");
-                    bestLi.textContent = errorMessage;
-                    bestLi.style.color = "red";
-                    bestCharsList.appendChild(bestLi);
-    
-                    const worstLi = document.createElement("li");
-                    worstLi.textContent = errorMessage;
-                    worstLi.style.color = "red";
-                    worstCharsList.appendChild(worstLi);
-                });
-        };
-    
         // 로그아웃 팝업 열기
         function showLogoutModal() {
             document.getElementById("logout-modal").style.display = "flex";
@@ -150,6 +86,129 @@
             history.go(1);  // 뒤로 가기를 막고
             showLogoutModal();  // 로그아웃 팝업 띄우기
         };
+
+        window.onload = function () {
+            // 잘 맞추는 글자와 못 맞추는 글자 데이터 가져오기
+            fetch("/game/get_user_score_data")
+                .then(response => response.json())
+                .then(data => {
+                    updateScoreBox(data);
+                })
+                .catch(error => {
+                    console.error("Error fetching score data:", error);
+                });
+
+            // 히스토리 데이터 가져오기
+            fetch("/game/get_history")
+                .then(response => response.json())
+                .then(data => {
+                    updateHistoryBox(data);
+                })
+                .catch(error => {
+                    console.error("Error fetching history data:", error);
+                });
+        };
+
+        function updateScoreBox(data) {
+            const bestCharsList = document.getElementById("best-chars");
+            const worstCharsList = document.getElementById("worst-chars");
+
+            // 기존 내용 초기화
+            bestCharsList.innerHTML = "";
+            worstCharsList.innerHTML = "";
+
+            if (data.success) {
+                // 잘 맞춘 글자 처리
+                if (data.best_chars && data.best_chars.length > 0) {
+                    const bestChars = data.best_chars.map(item => `"${item[0]}"`).join(", ");
+                    const bestLi = document.createElement("li");
+                    bestLi.textContent = bestChars;
+                    bestCharsList.appendChild(bestLi);
+                } else {
+                    bestCharsList.innerHTML = "<li style='color: red;'>충분한 기록이 부족합니다.</li>";
+                }
+
+                // 어려운 글자 처리
+                if (data.worst_chars && data.worst_chars.length > 0) {
+                    const worstChars = data.worst_chars.map(item => `"${item[0]}"`).join(", ");
+                    const worstLi = document.createElement("li");
+                    worstLi.textContent = worstChars;
+                    worstCharsList.appendChild(worstLi);
+                } else {
+                    worstCharsList.innerHTML = "<li style='color: red;'>충분한 기록이 부족합니다.</li>";
+                }
+            } else {
+                const errorMessage = "<li style='color: red;'>데이터를 불러오는 중 오류가 발생했습니다.</li>";
+                bestCharsList.innerHTML = errorMessage;
+                worstCharsList.innerHTML = errorMessage;
+            }
+        }
+
+        function updateHistoryBox(data) {
+            const historyList = document.getElementById("game-history");
+
+            // 기존 내용 초기화
+            historyList.innerHTML = "";
+
+            if (data.success && data.history.length > 0) {
+                data.history.forEach(record => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `
+                        <span>${record.date}</span>
+                        <span>${record.time} 초</span>
+                        <span>${record.accuracy.toFixed(2)}%</span>
+                    `;
+
+                    // 기록에 맞춤형 단어와 랜덤 단어 추가
+                    li.setAttribute("data-custom-words", JSON.stringify(record.custom_words));
+                    li.setAttribute("data-random-words", JSON.stringify(record.random_words));
+
+                    // 마우스를 올리면 툴팁 표시
+                    li.onmouseover = function(event) {
+                        const customWords = JSON.parse(li.getAttribute("data-custom-words"));
+                        const randomWords = JSON.parse(li.getAttribute("data-random-words"));
+                        showTooltip(customWords, randomWords, event);
+                    };
+
+                    // 마우스를 떼면 툴팁 숨기기
+                    li.onmouseout = function() {
+                        document.getElementById("tooltip").style.display = "none";
+                    };
+
+                    historyList.appendChild(li);
+                });
+            } else {
+                historyList.innerHTML = "<li style='color: red;'>이전에 저장된 기록이 없습니다.</li>";
+            }
+        }
+
+        // 툴팁 표시
+        function showTooltip(customWords, randomWords, event) {
+            const tooltip = document.getElementById("tooltip");
+            const customWordsList = document.getElementById("custom-words-list");
+            const randomWordsList = document.getElementById("random-words-list");
+
+            // 리스트 초기화
+            customWordsList.innerHTML = "";
+            randomWordsList.innerHTML = "";
+
+            customWords.forEach(word => {
+                const li = document.createElement("li");
+                li.textContent = word;
+                customWordsList.appendChild(li);
+            });
+
+            randomWords.forEach(word => {
+                const li = document.createElement("li");
+                li.textContent = word;
+                randomWordsList.appendChild(li);
+            });
+
+            // 툴팁 위치 설정
+            tooltip.style.left = event.pageX + 10 + "px";
+            tooltip.style.top = event.pageY + 10 + "px";
+            tooltip.style.display = "block";
+        }
     </script>    
 </body>
 </html>

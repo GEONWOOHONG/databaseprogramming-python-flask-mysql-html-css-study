@@ -78,32 +78,64 @@ def register():
         error_messages = {}
 
         # 닉네임 검증
-        if not re.match(r"^[a-zA-Z0-9가-힣!@#$%^&*()]{1,12}$", nickname):
-            error_messages["nickname"] = "닉네임은 한글 최대 6자 또는 영문/숫자/특수문자 최대 12자까지 가능합니다."
+        def calculate_width(nickname):
+            """닉네임의 실제 폭 계산 (영문, 숫자, 특수문자는 1칸씩)"""
+            return len(nickname)
+
+        if " " in nickname:  # 공백 포함 여부
+            error_messages["nickname"] = "닉네임에 공백을 포함할 수 없습니다."
+        elif not re.match(r"^[a-zA-Z0-9!@#$%^&*()]+$", nickname):
+            error_messages["nickname"] = "닉네임은 영문, 숫자, 특수문자만 사용할 수 있습니다."
+        else:
+            nickname_width = calculate_width(nickname)
+            if nickname_width < 2:
+                error_messages["nickname"] = "닉네임은 최소 2칸 이상이어야 합니다."
+            elif nickname_width > 12:
+                error_messages["nickname"] = "닉네임은 최대 12칸 이내여야 합니다."
+
+        # 아이디 검증
         if not re.match(r"^[a-z0-9]{6,12}$", username):
-            error_messages["username"] = "아이디는 영어 소문자 및 숫자로만 6~12자 이내로 입력하세요."
-        if len(password) < 8 or len(set(re.findall(r"[A-Z]", password)) | 
-                                 set(re.findall(r"[a-z]", password)) |
-                                 set(re.findall(r"\d", password)) | 
-                                 set(re.findall(r"\W", password))) < 2:
-            error_messages["password"] = "비밀번호는 최소 8자 이상이며, 두 종류 이상의 문자를 사용해야 합니다."
-        if password != confirm_password:
+            error_messages["username"] = "아이디는 영어 소문자 및 숫자로만 6~12자 이내로 입력해야 합니다."
+        # 비밀번호 검증
+        if len(password) < 8 or not (
+            bool(re.search(r"[a-z]", password)) +
+            bool(re.search(r"[A-Z]", password)) +
+            bool(re.search(r"\d", password)) +
+            bool(re.search(r"[!@#$%^&*()_\-+=<>?]", password)) >= 2
+        ):
+            error_messages["password"] = "비밀번호는 최소 8자 이상이며, 두 종류 이상의 문자를 포함해야 합니다."
+        # 비밀번호 재확인
+        if not password or not confirm_password:
+            error_messages["confirm_password"] = "비밀번호를 입력하세요."
+        elif password != confirm_password:
             error_messages["confirm_password"] = "비밀번호가 일치하지 않습니다."
 
+        # 에러 메시지가 있는 경우 반환
         if error_messages:
             return jsonify({"success": False, "errors": error_messages})
 
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        # 아이디 중복 확인
         connection = get_db_connection()
         cursor = connection.cursor()
+        cursor.execute("SELECT 1 FROM users WHERE username = %s", (username,))
+        user_exists = cursor.fetchone()
 
-        try:
-            cursor.execute("INSERT INTO users (nickname, username, password) VALUES (%s, %s, %s)", 
-                           (nickname, username, hashed_password))
-            connection.commit()
-            return jsonify({"success": True})  # 성공 시 반환
-        except pymysql.IntegrityError:
+        if user_exists:
+            connection.close()
             return jsonify({"success": False, "errors": {"username": "이미 사용 중인 아이디입니다."}})
+
+        # 사용자 데이터 삽입
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        try:
+            cursor.execute(
+                "INSERT INTO users (nickname, username, password) VALUES (%s, %s, %s)",
+                (nickname, username, hashed_password)
+            )
+            connection.commit(),
+            return jsonify({"success": True})  # 성공 시 반환
+        except Exception as e:
+            connection.rollback()
+            return jsonify({"success": False, "errors": {"general": "서버 오류가 발생했습니다. 다시 시도해주세요."}})
         finally:
             connection.close()
 

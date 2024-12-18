@@ -21,25 +21,25 @@
             <!-- 닉네임 입력 -->
             <div class="form-group">
                 <input type="text" name="nickname" id="nickname" placeholder="닉네임" value="{{ form_data.get('nickname', '') }}" autocomplete="off">
-                <p class="error" id="nickname-error">{{ error_messages.get('nickname', '') }}</p>
+                <p class="error" id="nickname-error" style="color: red;"></p>
             </div>
 
             <!-- 아이디 입력 -->
             <div class="form-group">
                 <input type="text" name="username" id="username" placeholder="아이디" value="{{ form_data.get('username', '') }}" autocomplete="off">
-                <p class="error" id="username-error">{{ error_messages.get('username', '') }}</p>
+                <p class="error" id="username-error" style="color: red;"></p>
             </div>
 
             <!-- 비밀번호 입력 -->
             <div class="form-group">
                 <input type="password" name="password" id="password" placeholder="비밀번호" autocomplete="off">
-                <p class="error" id="password-error">{{ error_messages.get('password', '') }}</p>
+                <p class="error" id="password-error" style="color: red;"></p>
             </div>
 
             <!-- 비밀번호 재입력 -->
             <div class="form-group">
                 <input type="password" name="confirm_password" id="confirm_password" placeholder="비밀번호 재입력" autocomplete="off">
-                <p class="error" id="confirm-password-error">{{ error_messages.get('confirm_password', '') }}</p>
+                <p class="error" id="confirm-password-error" style="color: red;"></p>
             </div>
 
             <!-- 버튼 그룹 -->
@@ -55,38 +55,102 @@
         function showSuccessModal() {
             const successModal = document.getElementById("success-modal");
             successModal.style.display = "flex"; // 모달 표시
-    
+
             // 2초 후 로그인 페이지로 이동
             setTimeout(() => {
                 window.location.href = "{{ url_for('login') }}";
             }, 2000);
         }
-    
-        // AJAX를 통한 폼 제출 및 서버 검증
+
         document.getElementById("register-form").addEventListener("submit", function (e) {
             e.preventDefault(); // 기본 제출 방지
-    
+
+            // 모든 입력값 가져오기
+            const nickname = document.getElementById("nickname").value.trim();
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const confirmPassword = document.getElementById("confirm_password").value.trim();
+
+            // 입력값 검증: 공백 확인
+            let hasError = false;
+
+            const clearErrorMessages = () => {
+                document.getElementById("nickname-error").textContent = "";
+                document.getElementById("username-error").textContent = "";
+                document.getElementById("password-error").textContent = "";
+                document.getElementById("confirm-password-error").textContent = "";
+            };
+
+            clearErrorMessages();
+
+            // 에러 발생 시 입력값 초기화 함수
+            const clearInput = (fieldId) => {
+                document.getElementById(fieldId).value = "";
+            };
+
+            if (!nickname) {
+                document.getElementById("nickname-error").textContent = "닉네임을 입력하세요.";
+                clearInput("nickname");
+                hasError = true;
+            }
+
+            if (!username) {
+                document.getElementById("username-error").textContent = "아이디를 입력하세요.";
+                clearInput("username");
+                hasError = true;
+            }
+
+            if (!password) {
+                document.getElementById("password-error").textContent = "비밀번호를 입력하세요.";
+                clearInput("password");
+                clearInput("confirm_password"); // 비밀번호 입력 초기화
+                hasError = true;
+            }
+
+            if (!confirmPassword) {
+                document.getElementById("confirm-password-error").textContent = "비밀번호 재입력을 입력하세요.";
+                clearInput("confirm_password");
+                hasError = true;
+            }
+
+            // 공백 에러가 있는 경우 서버 요청 중단
+            if (hasError) return;
+
+            // 서버로 폼 데이터 전송
             const formData = new FormData(this);
             fetch("/register", {
                 method: "POST",
-                body: formData
+                body: formData,
             })
-            .then(response => response.json())
-            .then(data => {
-                // 성공 시 모달 표시
-                if (data.success) {
-                    showSuccessModal();
-                } else {
-                    // 에러 메시지 표시
-                    const errors = data.errors || {};
-                    document.getElementById("nickname-error").textContent = errors.nickname || "";
-                    document.getElementById("username-error").textContent = errors.username || "";
-                    document.getElementById("password-error").textContent = errors.password || "";
-                    document.getElementById("confirm-password-error").textContent = errors.confirm_password || "";
-                }
-            })
-            .catch(() => alert("서버와의 통신 오류가 발생했습니다."));
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error("서버와 통신하는 동안 문제가 발생했습니다.");
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    if (data.success) {
+                        showSuccessModal(); // 성공 모달 표시
+                    } else {
+                        const errors = data.errors || {};
+                        document.getElementById("nickname-error").textContent = errors.nickname || "";
+                        document.getElementById("username-error").textContent = errors.username || "";
+                        document.getElementById("password-error").textContent = errors.password || "";
+                        document.getElementById("confirm-password-error").textContent = errors.confirm_password || "";
+
+                        // 서버 응답 기반 입력값 초기화
+                        if (errors.nickname) clearInput("nickname");
+                        if (errors.username) clearInput("username");
+                        if (errors.password || errors.confirm_password) {
+                            clearInput("password");
+                            clearInput("confirm_password");
+                        }
+                    }
+                })
+                .catch((error) => {
+                    alert(error.message);
+                });
         });
-    </script>    
+    </script>
 </body>
 </html>

@@ -24,7 +24,6 @@ start_time = 0  # 시작 시간
 total_correct = []  # 각 단어별 글자 맞춤 여부
 total_characters = 0  # 총 입력한 글자 수
 
-# 자주 틀리는 글자 기반 단어와 랜덤 단어 생성 함수
 def generate_words(user_id):
     connection = get_db_connection()
     cursor = connection.cursor()
@@ -34,15 +33,17 @@ def generate_words(user_id):
         cursor.execute("SELECT char_score FROM user_scores WHERE user_id = %s", (user_id,))
         result = cursor.fetchone()
 
-        frequent_words = set()
+        frequent_words = set()  # 상위 글자 기반 단어 저장
+        random_words = []       # 랜덤 단어 저장
+
         if result:
             char_score = json.loads(result[0])
 
-            # 음수 스코어가 있는 글자만 정렬
+            # 음수 스코어가 있는 글자만 정렬 후 상위 4개 선택
             low_score_chars = sorted(
                 [char for char, score in char_score.items() if score < 0],
                 key=lambda x: char_score[x]
-            )[:4]  # 상위 4개 글자만 선택
+            )[:4]
 
             # 각 상위 글자별 최대 3개의 단어 가져오기
             for char in low_score_chars:
@@ -55,7 +56,7 @@ def generate_words(user_id):
                 words = [row[0] for row in cursor.fetchall()]
                 frequent_words.update(words)
 
-            # 부족한 단어를 다른 상위 글자에서 가져오기
+            # 부족한 단어를 다른 상위 글자에서 추가로 가져오기
             for char in low_score_chars:
                 while len(frequent_words) < 12:
                     cursor.execute("""
@@ -71,28 +72,59 @@ def generate_words(user_id):
                     else:
                         break  # 더 이상 가져올 단어가 없으면 종료
 
-        # 상위 글자에 포함되지 않는 랜덤 단어 8개 가져오기
-        excluded_words = tuple(frequent_words) if frequent_words else ("",)
-        cursor.execute("""
-            SELECT DISTINCT word 
-            FROM three_words 
-            WHERE word NOT IN %s 
-            ORDER BY RAND() 
-            LIMIT 8
-        """, (excluded_words,))
-        random_words = [row[0] for row in cursor.fetchall()]
+            # 부족한 단어를 랜덤 단어로 채우기
+            while len(frequent_words) < 12:
+                cursor.execute("""
+                    SELECT DISTINCT word 
+                    FROM three_words 
+                    WHERE word NOT IN %s 
+                    ORDER BY RAND() 
+                    LIMIT 1
+                """, (tuple(frequent_words),))
+                word = cursor.fetchone()
+                if word:
+                    frequent_words.add(word[0])
+                else:
+                    break
 
         # 스코어가 없는 경우: 랜덤 단어 20개 가져오기
         if not frequent_words:
             cursor.execute("SELECT word FROM three_words ORDER BY RAND() LIMIT 20")
             frequent_words.update(row[0] for row in cursor.fetchall())
-            random_words = []
+        else:
+            # 상위 글자에 포함되지 않는 랜덤 단어 8개 가져오기
+            excluded_words = tuple(frequent_words) if frequent_words else ("",)
+            cursor.execute("""
+                SELECT DISTINCT word 
+                FROM three_words 
+                WHERE word NOT IN %s 
+                ORDER BY RAND() 
+                LIMIT 8
+            """, (excluded_words,))
+            random_words = [row[0] for row in cursor.fetchall()]
 
     finally:
         connection.close()
 
+    # 디버깅용 출력: 사용자 맞춤 단어와 랜덤 단어
+    custom_words = list(frequent_words)[:12]
+    print("Custom Words (User-specific):", custom_words)
+    print("Random Words:", random_words)
+
+    # 결과를 바로 game_results에 저장
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO game_results (user_id, elapsed_time, accuracy, custom_words, random_words)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user_id, 0, 0, json.dumps(custom_words), json.dumps(random_words)))
+        connection.commit()
+    finally:
+        connection.close()
+
     # 최종 단어 리스트: 12개 단어 + 8개 랜덤 단어
-    final_words = list(frequent_words)[:12] + random_words
+    final_words = custom_words + random_words
     random.shuffle(final_words)  # 섞어서 반환
     return final_words
 
@@ -104,9 +136,22 @@ def index():
     if "user_id" not in session:
         return redirect(url_for("login"))  # 로그인하지 않은 경우 로그인 페이지로 이동
 
+    user_id = session["user_id"]
+
+    # 비정상적인 기록 삭제
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("""
+            DELETE FROM game_results
+            WHERE user_id = %s AND is_completed = FALSE
+        """, (user_id,))
+        connection.commit()
+    finally:
+        connection.close()
+
     if request.method == "POST":
         if "start_game" in request.form:
-            user_id = session["user_id"]
             random_words = generate_words(user_id)
 
             current_index = 0
@@ -223,11 +268,26 @@ def results_page():
         total_correct = []  # 비정상 데이터 초기화
         return redirect(url_for("game.restart_game"))
 
+    # 소요 시간과 정확도 계산
     elapsed_time = int(time.time() - start_time)
     accuracy = (sum([sum(word) for word in total_correct]) / sum([len(word) for word in total_correct])) * 100
 
-    # 한 사이클의 결과를 기록
+    # user_scores 테이블 업데이트 (사용자 스코어)
     update_user_scores(user_id, random_words, total_correct)
+
+    # game_results 테이블에서 가장 최근 데이터 업데이트 (소요 시간, 정확도, 완료 상태)
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    try:
+        cursor.execute("""
+            UPDATE game_results
+            SET elapsed_time = %s, accuracy = %s, is_completed = TRUE
+            WHERE user_id = %s
+            ORDER BY id DESC LIMIT 1
+        """, (elapsed_time, accuracy, user_id))
+        connection.commit()
+    finally:
+        connection.close()
 
     return render_template("results.html", elapsed_time=elapsed_time, accuracy=accuracy)
 
@@ -240,12 +300,15 @@ def restart_game():
         return redirect(url_for("login"))
 
     user_id = session["user_id"]
-    random_words = generate_words(user_id)  # 새 단어 리스트 생성
+
+    # 새 단어 리스트 생성
+    random_words = generate_words(user_id)
 
     current_index = 0
     start_time = time.time()  # 게임 시작 시간 초기화
     total_correct = []
     total_characters = 0
+
     return redirect(url_for("game.play_game"))
 
 # 사용자 데이터베이스에서 가장 잘 맞춘 글자와 가장 어려운 글자 추출
@@ -278,3 +341,48 @@ def get_user_score_data():
     connection.close()
 
     return jsonify({"success": True, "best_chars": best_chars, "worst_chars": worst_chars})
+
+# 사용자 게임 기록을 반환하는 엔드포인트
+@game_blueprint.route("/get_history", methods=["GET"])
+def get_history():
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "Unauthorized"})
+    
+    user_id = session["user_id"]
+
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    try:
+        # game_results 테이블에서 해당 사용자의 기록을 가져오기
+        cursor.execute("""
+            SELECT DATE_FORMAT(created_at, '%%Y-%%m-%%d') as date, 
+                   elapsed_time, 
+                   accuracy,
+                   custom_words,
+                   random_words
+            FROM game_results
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 15  -- 최대 15개로 수정
+        """, (user_id,))
+        history = cursor.fetchall()
+        
+        # 기록 데이터 포맷 변환
+        history_data = [
+            {
+                "date": row[0],
+                "time": row[1],
+                "accuracy": row[2],
+                "custom_words": json.loads(row[3]) if row[3] else [],
+                "random_words": json.loads(row[4]) if row[4] else []
+            }
+            for row in history
+        ]
+
+        return jsonify({"success": True, "history": history_data})
+    except Exception as e:
+        print("Error fetching user history:", e)
+        return jsonify({"success": False, "message": "Error fetching history."})
+    finally:
+        connection.close()
